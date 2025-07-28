@@ -6,7 +6,6 @@ import { generateToken } from "../lib/utils.js";
 // Takes email, fullName, and password from request body and validates them
 export const signup = async (req, res) => {
     const { email, fullName, password } = req.body;
-
     try {
         // Validate input
         if (!email || !fullName || !password) {
@@ -58,10 +57,34 @@ export const signup = async (req, res) => {
     }
 }
 export const login = async (req, res) => {
+    const { email, password } = req.body;
     try {
-        res.status(201).json({ message: "User signed up successfully" });
+        if (!email || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
+        }
+
+        const isPasswordCorrect = await bycrypt.compare(password, user.password);
+        if(!isPasswordCorrect) {
+            return res.status(400).json({ message: "Invalid password" });
+        }
+
+        generateToken(user._id, res);
+
+        res.status(200).json({
+            _id: user._id,
+            email: user.email,
+            fullName: user.fullName,
+            profilePicture: user.profilePicture,
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.log("Error in login", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
     }
 }
 export const logout = async (req, res) => {
